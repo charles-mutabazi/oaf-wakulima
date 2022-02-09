@@ -14,8 +14,9 @@ declare global {
 }
 
 export type RootStackParamList = {
-  Root: NavigatorScreenParams<RootTabParamList> | undefined;
-  Modal: undefined;
+  Home: undefined;
+  CapturePolygon: undefined;
+  AddFarm: undefined;
   NotFound: undefined;
 };
 
@@ -33,3 +34,8 @@ export type RootTabScreenProps<Screen extends keyof RootTabParamList> = Composit
   BottomTabScreenProps<RootTabParamList, Screen>,
   NativeStackScreenProps<RootStackParamList>
 >;
+
+export type Coords = {
+  latitude: string,
+  longitude: string
+}
