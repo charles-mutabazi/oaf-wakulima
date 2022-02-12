@@ -106,7 +106,7 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                     <Marker
                         coordinate={marker}
                         draggable={true}
-                        onDragStart={(e) => setPolyCoords([...polyCoords, e.nativeEvent.coordinate])}
+                        // onDragStart={(e) => setPolyCoords([...polyCoords, e.nativeEvent.coordinate])}
                         onDragEnd={(e) => {
                             setPolyCoords([...polyCoords, e.nativeEvent.coordinate])
                         }}
@@ -118,8 +118,9 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                 {polyCoords.length > 0 &&
                     <Polygon
                         coordinates={polyCoords}
-                        strokeColor="#000" // fallback for when `strokeColors` is not supported by the map-provider
-                        fillColor={Colors.orange}
+                        strokeColor={Colors.green}
+                        strokeWidth={2}
+                        fillColor={Colors.orangeTranslucent}
                     />
                 }
 

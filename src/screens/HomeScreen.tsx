@@ -2,7 +2,7 @@ import {Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View} from 're
 import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
 import Colors from "../constants/Colors";
 import {Divider} from "react-native-elements";
-import {ActivityIndicator, Chip, FAB, IconButton, Menu, Provider} from "react-native-paper";
+import {Chip, FAB, IconButton, Menu, Provider} from "react-native-paper";
 import {useEffect, useState} from "react";
 import * as Location from 'expo-location';
 import {MVLocation} from "../models/Location";
@@ -12,7 +12,8 @@ import {useDispatch, useSelector} from "react-redux";
 import {Dispatch, RootState} from "../store";
 import {globalStyles} from "./styles";
 import {currentUser} from "../models/User";
-import {findIndex, xor} from "lodash";
+import {isEmpty, xor} from "lodash";
+import EmptyList from "../components/EmptyList";
 
 export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
 
@@ -22,7 +23,7 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
     const [inDeleteMode, setInDeleteMode] = useState(false);
     const [deleteArr, setDeleteArr] = useState<number[]>([]);
 
-    const {farms, geoShapes} = useSelector((state: RootState) => state.farms)
+    const {farms, geoShapes, cropHarvests} = useSelector((state: RootState) => state.farms)
     const isLoading = useSelector((state: RootState) => state.loading.global)
     const dispatch = useDispatch<Dispatch>()
 
@@ -43,12 +44,27 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
                 longitudeDelta: 0.0922,
             }
             setLocation(location);
-            console.log("Farms:", deleteArr)
         })();
-    }, [deleteArr]);
+    }, []);
+
+    const handleDelete = async () =>{
+        let payload = {
+            apiKey: currentUser.apikey,
+            farmIds: deleteArr,
+            geoShapes,
+            cropHarvests
+        }
+
+        await dispatch.farms.deleteFarms(payload)
+
+        if(!isLoading){
+            setDeleteArr([])
+            setInDeleteMode(false)
+        }
+    }
 
     const renderItem = (item: Farm) => (
-        <TouchableOpacity onPress={() => {
+        <TouchableOpacity onPress={inDeleteMode && isLoading ? undefined : () => {
             if(!inDeleteMode){
                 navigation.navigate("Farm", {farm: item})
             } else {
@@ -56,7 +72,7 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
             }
 
         }}>
-            <View style={[styles.listItem, findIndex(deleteArr, item.id!) !== -1 && {borderWidth: 2, borderColor: Colors.green}]}>
+            <View style={[styles.listItem, deleteArr.includes(item.id!) && {borderWidth: 2, borderColor: Colors.green}]}>
                 <Text style={{flex: 1, marginEnd: 32}}>{item.id}</Text>
                 <Text style={{flex: 3, marginEnd: 32}}>{item.label}</Text>
                 <Text style={{flex: 1, marginEnd: 32}}>{`${(item.size).toFixed(2)} ${item.sizeUnit}`}</Text>
@@ -85,24 +101,19 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
                         <Text style={{fontWeight: "bold", fontSize: 18}}>Farm List</Text>
 
                         {inDeleteMode ?
-                            <Chip icon="close" onPress={() => setInDeleteMode(false)}>Cancel</Chip>
+                            <Chip icon="close" onPress={() => {
+                                setInDeleteMode(false);
+                                setDeleteArr([])
+                            }}>Cancel</Chip>
                             :
-                            <View style={{flexDirection: "row"}}>
-                                {!isLoading ?
-                                    <IconButton
-                                        icon="refresh"
-                                        color={Colors.orange}
-                                        size={28}
-                                        style={{marginEnd: 16}}
-                                        onPress={() => dispatch.farms.syncFarms(currentUser.apikey)}
-                                    />
-                                    :
-                                    <ActivityIndicator style={{marginEnd: 16}} color={Colors.orange}/>
+                            <View style={{flexDirection: "row", alignItems: "center"}}>
+                                {isLoading &&
+                                    <Text style={{fontSize:10, marginEnd:16, color:"grey", fontWeight:"bold"}}>Syncing...</Text>
                                 }
 
                                 <Menu
                                     visible={showMenu}
-                                    onDismiss={() => setShowMenu(true)}
+                                    onDismiss={() => setShowMenu(false)}
                                     anchor={<IconButton
                                         icon="dots-vertical"
                                         color="grey"
@@ -111,13 +122,34 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
                                     />}
                                 >
                                     <Menu.Item
+                                        icon="sync"
+                                        onPress={() => {
+                                            dispatch.farms.syncFarms(currentUser.apikey)
+                                            setShowMenu(false)
+                                        }}
+                                        title="Refresh"
+                                    />
+
+                                    <Menu.Item
+                                        icon="send"
+                                        disabled
+                                        onPress={() => {
+                                            //no action at the moment
+                                            setShowMenu(false)
+                                        }}
+                                        title="Send"
+                                    />
+
+                                    <Menu.Item
                                         icon="delete"
                                         onPress={() => {
                                             setInDeleteMode(true);
                                             setShowMenu(false)
                                         }}
                                         title="Delete"
+                                        titleStyle={{color: Colors.red}}
                                     />
+
                                 </Menu>
                             </View>
                         }
@@ -126,17 +158,22 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
                     </View>
 
                     <Divider style={{marginVertical: 16}}/>
-                    <View style={{flexDirection: "row", marginHorizontal: 16}}>
-                        <Text style={{flex: 1, marginEnd: 32}}>#ID</Text>
-                        <Text style={{flex: 3, marginEnd: 32}}>Label</Text>
-                        <Text style={{flex: 1, marginEnd: 32}}>Size</Text>
-                    </View>
-
+                    {farms.length > 0 &&
+                        <View style={{flexDirection: "row", marginHorizontal: 16}}>
+                            <Text style={{flex: 1, marginEnd: 32}}>#ID</Text>
+                            <Text style={{flex: 3, marginEnd: 32}}>Label</Text>
+                            <Text style={{flex: 1, marginEnd: 32}}>Size</Text>
+                        </View>
+                    }
                     <FlatList
                         data={farms}
+                        refreshing={false} // hide the loading spinner
+                        onRefresh={inDeleteMode ? undefined : () => dispatch.farms.syncFarms(currentUser.apikey)}
+                        extraData={deleteArr}
                         renderItem={({item}) => renderItem(item)}
                         keyExtractor={(item, index) => index.toString()}
                         showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={() => <EmptyList text="Farm List is empty" iconName="clipboard-list-outline"/>}
                     />
                 </View>
 
@@ -145,7 +182,9 @@ export default function HomeScreen({navigation}: RootStackScreenProps<'Home'>) {
                         style={[styles.fab, {backgroundColor: Colors.red}]}
                         color="white"
                         icon="delete"
-                        onPress={() => console.log("delete farms")}
+                        loading={isLoading}
+                        disabled={isLoading || isEmpty(deleteArr)}
+                        onPress={async () => await handleDelete()}
                     />
                     :
                     <FAB

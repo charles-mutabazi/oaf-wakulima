@@ -12,6 +12,7 @@ import {Chip, Divider, Provider, List} from "react-native-paper";
 import NewHarvest from "../components/NewHavest";
 import {CropHarvest} from "../models/farms";
 import {filter, isEmpty} from "lodash";
+import EmptyList from "../components/EmptyList";
 
 export default function FarmScreen({navigation, route}: RootStackScreenProps<'Farm'>) {
 
@@ -76,17 +77,17 @@ export default function FarmScreen({navigation, route}: RootStackScreenProps<'Fa
                     </View>
                     <Divider style={{marginVertical: 20}}/>
 
-                    {!formVisible && farmHarvest.length > 0 &&
-                        <>
-                            <List.Subheader>Crop Harvests</List.Subheader>
-                            <FlatList
-                                data={farmHarvest}
-                                renderItem={({item}) => harvestItem(item)}
-                                keyExtractor={(item, index) => index.toString()}
-                                showsVerticalScrollIndicator={false}
-                                ItemSeparatorComponent={() => <Divider/>}
-                            />
-                        </>
+                    {!formVisible &&
+
+                        <FlatList
+                            data={farmHarvest}
+                            renderItem={({item}) => harvestItem(item)}
+                            keyExtractor={(item, index) => index.toString()}
+                            showsVerticalScrollIndicator={false}
+                            ItemSeparatorComponent={() => <Divider/>}
+                            ListHeaderComponent={() => <List.Subheader>Crop Harvests</List.Subheader>}
+                            ListEmptyComponent={() => <EmptyList text="Harvests will appear here." iconName="pine-tree"/>}
+                        />
 
                     }
 

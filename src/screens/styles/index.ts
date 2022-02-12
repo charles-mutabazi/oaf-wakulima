@@ -23,8 +23,7 @@ export const globalStyles = StyleSheet.create({
         height: Dimensions.get('window').height,
         position: "absolute",
         opacity: 0.7,
-        backgroundColor:
-        Colors.green,
+        backgroundColor: Colors.green,
         // justifyContent: "center",
         paddingTop: 44*3,
         alignItems: "center"

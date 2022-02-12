@@ -1,6 +1,6 @@
 import {createModel} from "@rematch/core";
 import {RootModel} from "./index";
-import {iteratee, uniqBy} from "lodash"
+import {filter, find, isEmpty, iteratee, remove, sortedUniqBy, unionBy, uniqBy} from "lodash"
 import {deleteRecord, get, post} from "../utils/Api";
 
 export interface CropHarvest {
@@ -45,6 +45,13 @@ interface FarmState {
     cropHarvests: CropHarvest[]
 }
 
+interface FarmDeleteType {
+    farmIds: number[],
+    geoShapes: GeoShape[],
+    cropHarvests: CropHarvest[],
+    apiKey: string
+}
+
 export const farms = createModel<RootModel>()({
     state: {
         farms: [],
@@ -53,23 +60,47 @@ export const farms = createModel<RootModel>()({
     } as FarmState,
 
     reducers: {
+        //FARM REDUCERS
         ADD_FARM: (state, payload: Farm) => ({
             ...state,
-            farms: uniqBy([...state.farms, payload], "id")
+            farms: sortedUniqBy(unionBy([...state.farms, payload], "id"), 'id')
         }),
 
         ADD_FARM_BULK: (state, payload: Farm[]) => ({
             ...state,
-            farms: uniqBy([...state.farms, ...payload], "id")
+            farms: sortedUniqBy(unionBy([...state.farms, ...payload], "id"), 'id')
         }),
 
+        DELETE_FARM: (state, payload: number) => ({
+            ...state,
+            farms: remove([...state.farms], (obj) => obj['id'] != payload)
+        }),
+
+        //GEOSHAPE REDUCERS
         ADD_GEO_SHAPE: (state, payload: GeoShape) => ({
             ...state,
-            geoShapes: uniqBy([...state.geoShapes, payload], "parcelId")
+            geoShapes: sortedUniqBy(unionBy([...state.geoShapes, payload], "id"), 'id')
         }),
+
+        DELETE_GEO_SHAPE: (state, payload: number) => ({
+            ...state,
+            geoShapes: remove([...state.geoShapes], (obj) => obj['id'] != payload)
+        }),
+
+        //HARVEST REDUCERS
         ADD_HARVEST: (state, payload: CropHarvest) => ({
             ...state,
-            cropHarvests: uniqBy([...state.cropHarvests, payload], iteratee("id"))
+            cropHarvests: sortedUniqBy(unionBy([...state.cropHarvests, payload], iteratee("id")), 'id')
+        }),
+
+        ADD_HARVEST_BULK: (state, payload: CropHarvest[]) => ({
+            ...state,
+            harvest: sortedUniqBy(unionBy([...state.farms, ...payload], "id"), 'id')
+        }),
+
+        DELETE_HARVEST: (state, payload: number) => ({
+            ...state,
+            cropHarvests: remove([...state.cropHarvests], (obj) => obj['id'] != payload)
         }),
 
         // CLEAR_FARMS: (state) => ({
@@ -85,10 +116,20 @@ export const farms = createModel<RootModel>()({
         return {
             async syncFarms(payload){
                 const farmsResponse = await get("/farms", payload)
-                    .catch(e => console.log("Error =>", e.message))
+                    .catch(e => console.log("Error while fetching farms =>", e.message))
                 if(farmsResponse) {
                     farms.ADD_FARM_BULK(farmsResponse.data)
+                    // get the geoshape data and crop harvests
+                    // await get("/geoshapes", payload) //<- API for getting GeoShapes is not working
+
+                    //get all harvests that were created by me --- via my api key
+                    const harvests = await get("/harvests", payload).catch(e => console.log("Unable to fetch crop harvests", e.message))
+
+                    if(harvests) {
+                        farms.ADD_HARVEST_BULK(harvests.data)
+                    }
                 }
+
             },
             async createFarmEffect(payload: {farm: Farm, apiKey: string, geoShape: GeoShape}): Promise<any> {
                 const response = await post("/farms", payload.farm, payload.apiKey)
@@ -130,17 +171,38 @@ export const farms = createModel<RootModel>()({
                     farms.ADD_HARVEST(response.data)
                 }
             },
-            deleteFarms({farms, apiKey}: {farms: Farm[], apiKey: string}) {
 
-                farms.forEach(async (farm) => {
-                    const res = await deleteRecord("/farms/"+farm.id, apiKey)
+            async deleteFarms({farmIds, apiKey, geoShapes, cropHarvests}: FarmDeleteType) {
 
-                    if(res.status === 200){
-                        //TODO: delete crop harvest from store with farm id
-                        //TODO: delete geoshape from store with farm id
-                        //TODO: delete farm from store with farm id
+                for (const farmId of farmIds) {
+
+                    //HARVEST OPS
+                    let geoShape = find(geoShapes, ['farmId', farmId]) // geoshape to delete
+                    if(!isEmpty(geoShape)){
+                        //delete geoshape from remote
+                        const gRes = await deleteRecord("/geoshapes/"+geoShape?.id, apiKey)
+                            .catch(e => console.log("Unable to delete GeoShape", e.message))
+                        //delete geoshape from local store
+                        if(gRes) {dispatch.farms.DELETE_GEO_SHAPE(geoShape?.id!)}
                     }
-                })
+
+                    //HARVEST OPS
+                    let cropHarvestsArr = filter(cropHarvests, ['farmId', farmId])
+                    if(cropHarvestsArr.length > 0) {
+                        for (const harvest of cropHarvestsArr) {
+                            const hRes = await deleteRecord("/harvests/"+harvest.id, apiKey)
+                                .catch(e => console.log("Unable to delete Harvest", e.message))
+
+                            if(hRes) { dispatch.farms.DELETE_HARVEST(harvest.id!)}
+                        }
+                    }
+
+                    //FINALLY, DELETE FARM
+                    //dispatch.farms.DELETE_FARM(farmId)
+                    const fRes = await deleteRecord("/farms/"+farmId, apiKey)
+                        .catch(e => console.log("Unable to delete Farm", e.message))
+                    if(fRes) {dispatch.farms.DELETE_FARM(farmId)}
+                }
 
             }
             //other effects will go here
