@@ -6,6 +6,7 @@
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Farm } from './farms';
 
 declare global {
   namespace ReactNavigation {
@@ -15,27 +16,11 @@ declare global {
 
 export type RootStackParamList = {
   Home: undefined;
-  CapturePolygon: undefined;
-  AddFarm: undefined;
-  NotFound: undefined;
+  CreateFarm: undefined;
+  Farm: { farm?: Farm };
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> = NativeStackScreenProps<
   RootStackParamList,
   Screen
 >;
-
-export type RootTabParamList = {
-  TabOne: undefined;
-  TabTwo: undefined;
-};
-
-export type RootTabScreenProps<Screen extends keyof RootTabParamList> = CompositeScreenProps<
-  BottomTabScreenProps<RootTabParamList, Screen>,
-  NativeStackScreenProps<RootStackParamList>
->;
-
-export type Coords = {
-  latitude: string,
-  longitude: string
-}

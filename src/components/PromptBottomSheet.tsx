@@ -10,6 +10,7 @@ interface SheetProps {
     redButtonTitle: string
     onGreenPress: any
     onRedPress: any
+    hasInput?: boolean
 }
 
 export default function PromptBottomSheet(props: SheetProps) {

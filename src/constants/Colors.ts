@@ -10,6 +10,7 @@ export default {
     greenLight: primaryColorGreenLight,
     red: primaryColorRed,
     orange: primaryColorOrange,
+    orangeTranslucent: "rgba(232, 183, 87, 0.9)",
     text: '#000',
     background: '#fff',
     tint: tintColorLight,

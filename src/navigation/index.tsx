@@ -7,7 +7,8 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import * as React from 'react';
 import HomeScreen from '../screens/HomeScreen';
-import CaptureMapPolygon from '../screens/CaptureMapPolygon';
+import CreateFarmScreen from '../screens/CreateFarmScreen';
+import FarmScreen from "../screens/FarmScreen";
 import {RootStackParamList} from '../models/types';
 
 export default function Navigation() {
@@ -28,7 +29,8 @@ function RootNavigator() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CapturePolygon" component={CaptureMapPolygon} options={{ headerShown: false }} />
+      <Stack.Screen name="Farm" component={FarmScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CreateFarm" component={CreateFarmScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

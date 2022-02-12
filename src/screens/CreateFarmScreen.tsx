@@ -4,24 +4,36 @@ import {useEffect, useState} from "react";
 import {MVLocation} from "../models/Location";
 import * as Location from "expo-location";
 import {LocationAccuracy} from "expo-location";
-import {Coords, RootStackScreenProps} from "../models/types";
+import {RootStackScreenProps} from "../models/types";
 import Colors from "../constants/Colors";
-import {Divider, Button, Icon} from "react-native-elements";
+import uuid from 'react-native-uuid';
+import {Icon} from "react-native-elements";
 import PromptBottomSheet from "../components/PromptBottomSheet";
+import BottomSheetWithInput from "../components/BottomSheetWithInput";
+import {Farm, GeoShape} from "../models/farms";
+import {currentUser} from "../models/User";
+import {getGeojson, getPolygonArea} from "../utils";
+import {useDispatch, useSelector} from "react-redux";
+import {Dispatch, RootState} from "../store";
 
 const ASPECT_RATIO = Dimensions.get('window').width / Dimensions.get('window').height
 const LATITUDE_DELTA = 0.002866
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO
 
-export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'CapturePolygon'>) {
+export default function CreateFarmScreen({navigation}: RootStackScreenProps<'CreateFarm'>) {
     const [currentLocation, setCurrentLocation] = useState<MVLocation | null>(null);
-    const [errorMsg, setErrorMsg] = useState<string>('');
-    const [showPrompt, setShowPrompt] = useState<boolean>(false);
-    const [recordState, setRecordState] = useState<boolean>(false);
+    const [errorMsg, setErrorMsg] = useState('');
+    const [showPrompt, setShowPrompt] = useState(false);
+    const [savePrompt, setSavePrompt] = useState(false);
+    const [recordState, setRecordState] = useState(false);
+    const [farmLabel, setFarmLabel] = useState<string>('');
     const [polyCoords, setPolyCoords] = useState<LatLng[]>([])
     const [marker, setMarker] = useState<LatLng>({latitude: 40.741895, longitude:-73.989308})
 
+    const isLoading = useSelector((state: RootState) => state.loading.models.farms)
 
+
+    const dispatch = useDispatch<Dispatch>()
 
     useEffect(() => {
         (async () => {
@@ -42,9 +54,39 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
             setMarker({latitude: coords.latitude, longitude: coords.longitude})
             //console.log("LOCATION:", location)
         })();
+
     }, []);
 
 
+    const handleSaveFarm = async () => {
+        // const farmId = Date.now() // <- using this throws and error - bigger than int32
+        const farmId = Math.floor(Math.random() * 999999999);
+
+        const geoShape: GeoShape = {
+            geojson: getGeojson(polyCoords),
+            parcelId: "WKM-"+farmId,
+            surfaceArea: getPolygonArea(polyCoords),
+            wkt: ""
+        }
+
+        const currentFarm: Farm = {
+            geoShape: [geoShape],
+            geoShapes: [geoShape],
+            label: farmLabel,
+            userId: currentUser.id,
+            userType: currentUser.userType,
+            uuid: uuid.v4().toString(),
+            ownerId: 0,
+            ownerType: "farmer",
+            size: getPolygonArea(polyCoords),
+            sizeUnit: "sqm"
+        }
+
+        await dispatch.farms.createFarmEffect({farm:currentFarm, apiKey: currentUser.apikey, geoShape})
+        if(!isLoading) {
+            navigation.goBack()
+        }
+    }
 
     return (
         <View style={styles.container}>
@@ -52,9 +94,9 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
                 style={styles.map}
                 pitchEnabled={!recordState}
                 scrollEnabled={!recordState}
-
+                loadingEnabled={true}
                 provider={PROVIDER_GOOGLE}
-                region={currentLocation as MVLocation}
+                initialRegion={currentLocation as MVLocation}
                 mapType="satellite"
                 userLocationAnnotationTitle="Your Location"
                 showsUserLocation={true}
@@ -77,6 +119,7 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
                     <Polygon
                         coordinates={polyCoords}
                         strokeColor="#000" // fallback for when `strokeColors` is not supported by the map-provider
+                        fillColor={Colors.orange}
                     />
                 }
 
@@ -101,7 +144,7 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
                         paddingVertical: 8,
                         backgroundColor: Colors.red,
                         paddingHorizontal: 16,
-                        borderRadius: "100%"
+                        borderRadius: 100
                     }} >
                     <Text style={{color: "white"}}>Recording</Text>
                 </View>
@@ -140,7 +183,7 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
                     type="material"
                     color={Colors.background}
                     iconStyle={{color: Colors.green}}
-                    onPress={() => navigation.goBack()}
+                    onPress={() => setSavePrompt(true)}
                 />
             </View>
 
@@ -156,6 +199,17 @@ export default function CaptureMapPolygon({navigation}: RootStackScreenProps<'Ca
                         setRecordState(false)
                         setShowPrompt(false)
                     }}
+                />
+            }
+
+            {savePrompt &&
+                <BottomSheetWithInput
+                    greenButtonTitle="Save"
+                    redButtonTitle="Discard"
+                    loading={isLoading}
+                    onGreenPress={() => handleSaveFarm()}
+                    onRedPress={() => setSavePrompt(false)}
+                    onChangeLabel={(label: string) => setFarmLabel(label)}
                 />
             }
 
