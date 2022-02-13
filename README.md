@@ -2,7 +2,7 @@
 Steps to run the app on your mobile device.
 1. Install **Expo Go App** on your phone - [Google PlayStore](https://play.google.com/store/apps/details?id=host.exp.exponent) 
 or [Apple AppStore](https://itunes.apple.com/app/apple-store/id982107779)
-2. Open this [Expo Project Page](https://expo.dev/@charles-mutabazi/oaf-wakulima?serviceType=eas&distribution=expo-go?release-channel=staging) from your phone browser. It should automatically request you to open the link using Expo Go app
+2. Open this [Expo Project Page](https://expo.dev/%40charles-mutabazi/oaf-wakulima?serviceType=classic&distribution=expo-go&releaseChannel=staging) from your phone browser. It should automatically request you to open the link using Expo Go app
 3. You should be able to run the app
 
 ### For Devs 
