@@ -1,4 +1,4 @@
-import {ScrollView, Text, TouchableOpacity, View} from "react-native";
+import {KeyboardAvoidingView, ScrollView, Text, TouchableOpacity, View} from "react-native";
 import {Divider, Menu, TextInput} from "react-native-paper";
 import {Button} from "react-native-elements";
 import Colors from "../constants/Colors";
@@ -94,13 +94,13 @@ export default function NewHarvest(props:{farmId: number, showForm: any}) {
 
     const isValidForm = () => {
       return (
-          !isEmpty(year) && !isEmpty(season) && !isEmpty(cropLabel.trim()) && qtty > 0 && !isEmpty(unit)
+          !isEmpty(year) && !isEmpty(season) && !isEmpty(cropLabel.trim()) && +qtty > 0 && !isEmpty(unit)
       )
     }
 
 
     return(
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{}}>
+        <ScrollView showsVerticalScrollIndicator={false}>
             <View style={{flexDirection: "row", justifyContent: "space-between"}}>
                 <Text>Year</Text>
                 <Menu
@@ -128,6 +128,18 @@ export default function NewHarvest(props:{farmId: number, showForm: any}) {
                         setYear("2019");
                         closeMenu(1)
                     }} title="2019"/>
+                    <Menu.Item onPress={() => {
+                        setYear("2018");
+                        closeMenu(1)
+                    }} title="2018"/>
+                    <Menu.Item onPress={() => {
+                        setYear("2017");
+                        closeMenu(1)
+                    }} title="2017"/>
+                    <Menu.Item onPress={() => {
+                        setYear("2016");
+                        closeMenu(1)
+                    }} title="2016"/>
                 </Menu>
             </View>
 
@@ -160,6 +172,7 @@ export default function NewHarvest(props:{farmId: number, showForm: any}) {
                 label="Enter crop label"
                 mode="outlined"
                 value={cropLabel}
+                autoComplete={false}
                 onChangeText={(val) => setCropLabel(val)}
             />
 
@@ -170,6 +183,7 @@ export default function NewHarvest(props:{farmId: number, showForm: any}) {
                     label="Quantity"
                     mode="outlined"
                     value={qtty}
+                    autoComplete={false}
                     keyboardType={"numeric"}
                     style={{flex: 3}}
                     onChangeText={(val) => setQtty(val)}

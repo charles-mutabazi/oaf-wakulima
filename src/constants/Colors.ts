@@ -1,8 +1,8 @@
 const tintColorLight = '#2B7F68';
-const primaryColorGreen = '#2B7F68'
+const primaryColorGreen = '#2B7F68' //rgba(43, 127, 104, 1)
 const primaryColorGreenLight = '#F2F9F7'
-const primaryColorRed = '#CE482D'
-const primaryColorOrange = '#E8B757'
+const primaryColorRed = '#CE482D' //rgba(206, 72, 45, 1)
+const primaryColorOrange = '#E8B757' //rgba(232, 183, 87, 1)
 
 export default {
     green: primaryColorGreen,

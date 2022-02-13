@@ -1,22 +1,26 @@
 import {useSelector} from "react-redux";
 import {RootState} from "../store";
 import {globalStyles} from "./styles";
-import {FlatList, Dimensions, KeyboardAvoidingView, Platform, StyleSheet, Text, View} from "react-native";
+import {Dimensions, FlatList, KeyboardAvoidingView, Platform, Text, View} from "react-native";
 import MapView, {Polygon, PROVIDER_GOOGLE, Region} from "react-native-maps";
 import {Icon} from "react-native-elements";
 import Colors from "../constants/Colors";
 import {RootStackScreenProps} from "../models/types";
 import {getFarmGeoJson} from "../utils";
 import {useState} from "react";
-import {Chip, Divider, Provider, List} from "react-native-paper";
+import {Chip, Colors as pColors, Divider, List, Provider} from "react-native-paper";
 import NewHarvest from "../components/NewHavest";
 import {CropHarvest} from "../models/farms";
 import {filter, isEmpty} from "lodash";
 import EmptyList from "../components/EmptyList";
+import WeatherGraph from "../components/WeatherGraph";
+import HarvestGraph from "../components/HarvestGraph";
 
 export default function FarmScreen({navigation, route}: RootStackScreenProps<'Farm'>) {
 
     const [formVisible, setFormVisible] = useState(false)
+    const [graphMode, setGraphMode] = useState(false)
+    const [weatherMode, setWeatherMode] = useState(false)
 
     //redux
     const {geoShapes, cropHarvests} = useSelector((state: RootState) => state.farms)
@@ -31,8 +35,25 @@ export default function FarmScreen({navigation, route}: RootStackScreenProps<'Fa
         <List.Item
             title={item.cropLabel}
             description={"Season: "+ item.seasonLabel}
-            right={props => <Text style={{fontWeight: "bold"}}>{item.quantity +" "+ item.quantityUnit}</Text>}
+            right={() => <Text style={{fontWeight: "bold"}}>{item.quantity +" "+ item.quantityUnit}</Text>}
         />
+    )
+
+    const ListHeader = () => (
+        <View style={{flexDirection: "row", justifyContent:"space-between"}}>
+            <List.Subheader>Crop Harvests</List.Subheader>
+
+            <Icon
+                size={18}
+                reverse
+                name={graphMode ? "format-list-text" : "chart-areaspline"}
+                type="material-community"
+                color={Colors.green}
+                onPress={() => setGraphMode(!graphMode)}
+            />
+
+        </View>
+
     )
 
     return (
@@ -70,37 +91,51 @@ export default function FarmScreen({navigation, route}: RootStackScreenProps<'Fa
                         </View>
 
                         {!formVisible &&
-                            <Chip icon="plus" onPress={() => setFormVisible(true)}>Add Harvest</Chip>
-                        }
+                            <View style={{flexDirection:"row", alignItems: "center"}}>
+                                <Icon
+                                    size={18}
+                                    reverse
+                                    name="weather-pouring"
+                                    onPress={() => setWeatherMode(!weatherMode)}
+                                    type="material-community"
+                                    color={pColors.blue700}
+                                    containerStyle={{marginEnd: 16}}
+                                />
 
+                                <Chip icon="plus" onPress={() => setFormVisible(true)}>Add Harvest</Chip>
+
+                            </View>
+                        }
 
                     </View>
                     <Divider style={{marginVertical: 20}}/>
+                    <View>
+                        {!weatherMode && !formVisible &&
+                            <>
+                                <ListHeader />
+                                {!graphMode &&
+                                    <FlatList
+                                        data={farmHarvest}
+                                        renderItem={({item}) => harvestItem(item)}
+                                        keyExtractor={(item, index) => index.toString()}
+                                        showsVerticalScrollIndicator={false}
+                                        ItemSeparatorComponent={() => <Divider/>}
+                                        ListEmptyComponent={() => <EmptyList text="Harvests will appear here." iconName="pine-tree"/>}
+                                    />
+                                }
+                            </>
+                        }
 
-                    {!formVisible &&
+                        {formVisible &&
+                            <NewHarvest farmId={farm?.id!} showForm={(state: boolean) => setFormVisible(state)}/>
+                        }
+                    </View>
 
-                        <FlatList
-                            data={farmHarvest}
-                            renderItem={({item}) => harvestItem(item)}
-                            keyExtractor={(item, index) => index.toString()}
-                            showsVerticalScrollIndicator={false}
-                            ItemSeparatorComponent={() => <Divider/>}
-                            ListHeaderComponent={() => <List.Subheader>Crop Harvests</List.Subheader>}
-                            ListEmptyComponent={() => <EmptyList text="Harvests will appear here." iconName="pine-tree"/>}
-                        />
-
-                    }
-
-                    {formVisible &&
-                        <NewHarvest farmId={farm?.id!} showForm={(state: boolean) => setFormVisible(state)}/>
-                    }
+                    {weatherMode && !formVisible && <WeatherGraph />}
+                    {graphMode && !formVisible && !weatherMode && <HarvestGraph />}
 
                 </KeyboardAvoidingView>
             </View>
         </Provider>
     )
 }
-
-const styles = StyleSheet.create({
-
-});
