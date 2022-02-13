@@ -22,13 +22,12 @@ const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO
 
 export default function CreateFarmScreen({navigation}: RootStackScreenProps<'CreateFarm'>) {
     const [currentLocation, setCurrentLocation] = useState<MVLocation | null>(null);
-    const [errorMsg, setErrorMsg] = useState('');
     const [showPrompt, setShowPrompt] = useState(false);
     const [savePrompt, setSavePrompt] = useState(false);
     const [recordState, setRecordState] = useState(false);
     const [farmLabel, setFarmLabel] = useState<string>('');
     const [polyCoords, setPolyCoords] = useState<LatLng[]>([])
-    const [marker, setMarker] = useState<LatLng>({latitude: 40.741895, longitude:-73.989308})
+    const [marker, setMarker] = useState<LatLng>()
 
     const isLoading = useSelector((state: RootState) => state.loading.models.farms)
 
@@ -39,11 +38,11 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
+                alert('Permission to access location was denied')
                 return;
             }
 
-            let {coords} = await Location.getCurrentPositionAsync({accuracy:LocationAccuracy.Highest});
+            let {coords} = await Location.getCurrentPositionAsync({accuracy:LocationAccuracy.BestForNavigation});
             let location: MVLocation = {
                 latitude: coords.latitude,
                 longitude: coords.longitude,
@@ -51,11 +50,17 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                 longitudeDelta: LONGITUDE_DELTA
             }
             setCurrentLocation(location);
-            setMarker({latitude: coords.latitude, longitude: coords.longitude})
+            //setMarker({latitude: coords.latitude, longitude: coords.longitude})
             //console.log("LOCATION:", location)
         })();
 
     }, []);
+
+    useEffect(() => {
+        if(recordState) {
+            setPolyCoords([...polyCoords, marker!])
+        }
+    }, [marker])
 
 
     const handleSaveFarm = async () => {
@@ -65,7 +70,7 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
         const geoShape: GeoShape = {
             geojson: getGeojson(polyCoords),
             parcelId: "WKM-"+farmId,
-            surfaceArea: getPolygonArea(polyCoords),
+            surfaceArea: getPolygonArea(polyCoords).area,
             wkt: ""
         }
 
@@ -78,8 +83,8 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
             uuid: uuid.v4().toString(),
             ownerId: 0,
             ownerType: "farmer",
-            size: getPolygonArea(polyCoords),
-            sizeUnit: "sqm"
+            size: getPolygonArea(polyCoords).area,
+            sizeUnit: getPolygonArea(polyCoords).unit
         }
 
         await dispatch.farms.createFarmEffect({farm:currentFarm, apiKey: currentUser.apikey, geoShape})
@@ -92,24 +97,22 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
         <View style={styles.container}>
             <MapView
                 style={styles.map}
+                mapPadding={{top: 44, bottom: 0, left: 0, right: 0}}
                 pitchEnabled={!recordState}
                 scrollEnabled={!recordState}
                 loadingEnabled={true}
                 provider={PROVIDER_GOOGLE}
-                initialRegion={currentLocation as MVLocation}
+                region={currentLocation as MVLocation}
                 mapType="satellite"
-                userLocationAnnotationTitle="Your Location"
                 showsUserLocation={true}
-                onPress={(e) => setMarker(e.nativeEvent.coordinate)}
+                onPress={(e) => { recordState ? setMarker(e.nativeEvent.coordinate) : undefined}}
             >
                 {recordState && (
                     <Marker
-                        coordinate={marker}
-                        draggable={true}
+                        coordinate={marker == null ? {latitude: currentLocation?.latitude!, longitude:currentLocation?.longitude!} : marker}
+                        draggable
                         // onDragStart={(e) => setPolyCoords([...polyCoords, e.nativeEvent.coordinate])}
-                        onDragEnd={(e) => {
-                            setPolyCoords([...polyCoords, e.nativeEvent.coordinate])
-                        }}
+                        onDragEnd={(e) => {setMarker(e.nativeEvent.coordinate)}}
                     >
                         <Icon name="place" type="material" size={50} color={Colors.red}/>
                     </Marker>
@@ -118,7 +121,7 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                 {polyCoords.length > 0 &&
                     <Polygon
                         coordinates={polyCoords}
-                        strokeColor={Colors.green}
+                        strokeColor={Colors.orange}
                         strokeWidth={2}
                         fillColor={Colors.orangeTranslucent}
                     />
@@ -175,7 +178,9 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                     type="material"
                     color={recordState ? Colors.red : Colors.background}
                     iconStyle={{color: recordState ? Colors.background : Colors.red}}
-                    onPress={() => setRecordState(!recordState)}
+                    onPress={() => {
+                        setRecordState(!recordState)
+                    }}
                 />
 
                 <Icon
@@ -208,6 +213,7 @@ export default function CreateFarmScreen({navigation}: RootStackScreenProps<'Cre
                     greenButtonTitle="Save"
                     redButtonTitle="Discard"
                     loading={isLoading}
+                    area={getPolygonArea(polyCoords)}
                     onGreenPress={() => handleSaveFarm()}
                     onRedPress={() => setSavePrompt(false)}
                     onChangeLabel={(label: string) => setFarmLabel(label)}

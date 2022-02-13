@@ -4,8 +4,6 @@ import Colors from "../constants/Colors";
 import {TextInput} from "react-native-paper";
 import {isEmpty} from "lodash";
 import {useState} from "react";
-import {useSelector} from "react-redux";
-import {RootState} from "../store";
 
 
 interface SheetProps {
@@ -16,22 +14,30 @@ interface SheetProps {
     onChangeLabel: any
     hasInput?: boolean
     loading: boolean
+    area: { area:number, unit:string }
 }
 
 export default function BottomSheetWithInput(props: SheetProps) {
     const [label, setLabel] = useState("")
+
+    const getDate = () => {
+        const formattedDate = new Date().toDateString()
+        const [, month, day, year] = formattedDate.split(' ')
+        return [day, month, year].join('-')
+    }
+
     return (
         <KeyboardAvoidingView style={{position: "absolute", bottom:0, width:"100%"}} behavior={Platform.OS == "ios" ? "position": undefined}>
 
             <View style={{flexDirection: "row", justifyContent: "space-between", padding: 16, backgroundColor: "white", borderRadius: 18, margin: 16 }}>
                 <View>
                     <Text style={{fontSize: 12, color: "gray"}}>Size</Text>
-                    <Text>120 Acre</Text>
+                    <Text>{props.area.area} {props.area.unit}</Text>
                 </View>
                 <View>
                     <View>
                         <Text style={{fontSize: 12, color: "gray"}}>Date Registered</Text>
-                        <Text>12, Feb 2022</Text>
+                        <Text>{getDate()}</Text>
                     </View>
                 </View>
             </View>
@@ -45,6 +51,7 @@ export default function BottomSheetWithInput(props: SheetProps) {
                         props.onChangeLabel(label)
                         setLabel(label)
                     }}
+                    autoComplete={false}
                     activeOutlineColor={Colors.green}
                     style={{backgroundColor: "#EEE"}}
                 />

@@ -1,10 +1,10 @@
-import {Geojson, LatLng} from "react-native-maps";
+import {LatLng} from "react-native-maps";
 import Colors from "../constants/Colors";
 import {getAreaOfPolygon, getCenter} from 'geolib';
 import {GeolibInputCoordinates} from "geolib/es/types";
 import {GeoShape} from "../models/farms";
 import {find, isEmpty} from "lodash";
-import GeoJSON, {GeoJsonObject} from "geojson";
+import GeoJSON from "geojson";
 
 export const getGeojson = (polygonArr: LatLng[]): string => {
     //geojson format
@@ -27,9 +27,29 @@ export const getGeojson = (polygonArr: LatLng[]): string => {
  * @param polygonArr - arr of coordinates that make up a polygon
  * @return number - returns the area of a polygon in sqm
  */
-export const getPolygonArea = (polygonArr: LatLng[]): number => {
+export const getPolygonArea = (polygonArr: LatLng[]): { area: number, unit: string } => {
     const coordsArr: GeolibInputCoordinates[] = polygonArr.map(point => [point.latitude, point.longitude])
-    return getAreaOfPolygon(coordsArr)
+    const ACRE = 4047
+    const HA = 10000
+
+    if( getAreaOfPolygon(coordsArr) >= ACRE ) {
+        return {
+            area: +(getAreaOfPolygon(coordsArr) / ACRE).toFixed(1),
+            unit: "Acre"
+        }
+    }
+
+    if( getAreaOfPolygon(coordsArr) >= HA ) {
+        return {
+            area: +(getAreaOfPolygon(coordsArr) / HA).toFixed(1),
+            unit: "Ha"
+        }
+    }
+
+    return {
+        area: +getAreaOfPolygon(coordsArr).toFixed(1),
+        unit: "Sqm"
+    }
 }
 
 export const getFarmGeoJson = (farmId: number, storeGeoShapes: GeoShape[]) => {
