@@ -1,6 +1,6 @@
 import {createModel} from "@rematch/core";
 import {RootModel} from "./index";
-import {filter, find, isEmpty, iteratee, remove, sortedUniqBy, unionBy, uniqBy} from "lodash"
+import {filter, find, isEmpty, iteratee, remove, sortedUniqBy, unionBy} from "lodash"
 import {deleteRecord, get, post} from "../utils/Api";
 
 export interface CropHarvest {
@@ -95,7 +95,7 @@ export const farms = createModel<RootModel>()({
 
         ADD_HARVEST_BULK: (state, payload: CropHarvest[]) => ({
             ...state,
-            harvest: sortedUniqBy(unionBy([...state.farms, ...payload], "id"), 'id')
+            cropHarvests: sortedUniqBy(unionBy([...state.cropHarvests, ...payload], "id"), 'id')
         }),
 
         DELETE_HARVEST: (state, payload: number) => ({
